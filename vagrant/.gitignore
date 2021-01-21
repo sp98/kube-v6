@@ -1,0 +1,6 @@
+/test
+/tmp
+/config
+/*.log
+/.vagrant
+/.vagrant-state

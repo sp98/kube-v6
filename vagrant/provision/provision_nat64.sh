@@ -17,7 +17,7 @@ sudo apt-get install -y build-essential linux-headers-$(uname -r) dkms \
 
 if [ ! -d "/home/vagrant/Jool" ]; then
 	echo "Downloading Jool"
-	git clone https://github.com/NICMx/Jool.git /home/vagrant/Jool.tmp
+	git clone https://github.com/NICMx/Jool.git --branch v3.5.7  /home/vagrant/Jool.tmp
 	mv /home/vagrant/Jool.tmp /home/vagrant/Jool
 fi
 

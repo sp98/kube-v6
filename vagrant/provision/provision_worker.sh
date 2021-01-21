@@ -61,7 +61,7 @@ EOF
 
 if [ ! -f "/vagrant/config/kubadm-join-${self_name}-done" ]; then
   echo "Initiate kubeadm join sequence !"
-  cmd=$(grep "^  kubeadm join" /vagrant/config/cert)
-  sudo $cmd
-  touch "/vagrant/config/kubadm-join-${self_name}-done"
+  # cmd=$(grep "^  sudo kubeadm join /vagrant/config/cert --discovery-token-unsafe-skip-ca-verification")
+  # $cmd
+  # sudo touch "/vagrant/config/kubadm-join-${self_name}-done"
 fi

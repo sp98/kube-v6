@@ -6,7 +6,7 @@ export K8S_NODE_OS=${K8S_NODE_OS:-ubuntu}
 export K8S_WORKERS=${K8S_WORKERS:-1}
 export VAGRANT_DEFAULT_PROVIDER=${VAGRANT_DEFAULT_PROVIDER:-virtualbox}
 export CONTIV_IMAGE_TAG=${CONTIV_IMAGE_TAG:-latest}
-export KUBERNETES_VERSION=${KUBERNETES_VERSION:-"1.10.5"}
+export KUBERNETES_VERSION=${KUBERNETES_VERSION:-"1.18.0"}
 
 if [ -f .vagrant-state ]; then
   . .vagrant-state

@@ -7,10 +7,12 @@
 # Largely inspired from contiv-VPP vagrant file.
 #
 
+
+
 require 'fileutils'
 
 env = { }
-ENV_VARIABLES = [ 'HTTP_PROXY', 'HTTPS_PROXY', 'K8S_NODE_OS', 'K8S_IP6_PREFIX', 'K8S_NAT64_PREFIX', 
+ENV_VARIABLES = [ 'HTTP_PROXY', 'HTTPS_PROXY', 'K8S_NODE_OS', 'K8S_IP6_PREFIX', 'K8S_NAT64_PREFIX',
 'K8S_WORKERS', 'KUBERNETES_VERSION', 'VAGRANT_DEFAULT_PROVIDER',
 'K8S_NAT64_ID', 'K8S_MASTER_ID', 'K8S_FIRST_WORKER_ID', 'K8S_SERVICE_CIDR',
 'DOCKER_VERSION' ]
@@ -33,7 +35,7 @@ module VagrantPlugins
     name 'EnvState'
 
     def self.up_hook(arg)
-        
+
     end
 
     def self.destroy_hook(arg)
@@ -80,7 +82,7 @@ http_proxy = env['HTTP_PROXY']
 https_proxy = env['HTTPS_PROXY']
 node_os = env['K8S_NODE_OS']
 base_ip6 = env['K8S_IP6_PREFIX']
-nat64_prefix = env['K8S_NAT64_PREFIX'] 
+nat64_prefix = env['K8S_NAT64_PREFIX']
 num_workers = env['K8S_WORKERS'].to_i
 provider = env['VAGRANT_DEFAULT_PROVIDER']
 k8s_version = env['KUBERNETES_VERSION']
@@ -108,14 +110,14 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   if Vagrant.has_plugin?("vagrant-vbguest")
       config.vbguest.auto_update = false
   end
-  
+
   if node_os == "ubuntu" then
       config.vm.box = "puppetlabs/ubuntu-16.04-64-nocm"
       config.vm.box_version = "1.0.0"
   else
       # Nothing for now, later add more OS
   end
-  
+
   if Vagrant.has_plugin?("vagrant-cachier")
     config.cache.scope = :box
     config.cache.enable :apt
@@ -124,27 +126,27 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     v.linked_clone = true if Vagrant::VERSION >= "1.8"
     v.customize ['modifyvm', :id, '--paravirtprovider', 'kvm']
   end
-  
+
   #Configure NAT64
   config.vm.define vms["nat64"][:hostname] do |nat64|
     nat64.vm.hostname = vms["nat64"][:hostname]
-    
+
     # Interface for K8s Cluster
     nat64.vm.network "private_network", virtualbox__intnet: "k86", auto_config: false
-    
+
     nat64.vm.provider "virtualbox" do |v|
       v.customize ["modifyvm", :id, "--ioapic", "on"]
       v.memory = 256
       v.cpus = 1
     end
-    
+
     nat64.vm.provision "shell" do |s|
       s.path = "provision/provision_every_node.sh"
       s.args = ["nat64"]
       s.env = env
       s.privileged = false
     end
-    
+
     nat64.vm.provision "shell" do |s|
       s.path = "provision/provision_nat64.sh"
       s.args = ["nat64"]
@@ -152,7 +154,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       s.privileged = false
     end
   end
-  
+
   # Configure VBox Master node
   config.vm.define vms["master"][:hostname] do |k86master|
     k86master.vm.hostname = vms["master"][:hostname]
@@ -165,7 +167,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       v.memory = 4096
       v.cpus = 4
     end
-    
+
     k86master.vm.provision "shell" do |s|
       s.path = "provision/provision_every_node.sh"
       s.args = ["master"]
@@ -179,21 +181,32 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       s.privileged = false
     end
   end
-  
-  # Configure VBox Worker node(s)
+
+   # Configure VBox Worker node(s)
   num_workers.times do |n|
     config.vm.define vms["w#{n}"][:hostname] do |node|
       node.vm.hostname = vms["w#{n}"][:hostname]
-      
+
       # Interface for K8s Cluster
       node.vm.network :private_network, virtualbox__intnet: "k86", auto_config: false
 
-      node.vm.provider "virtualbox" do |v|
-        v.customize ["modifyvm", :id, "--ioapic", "on"]
-        v.memory = 4096
-        v.cpus = 4
+      node.vm.provider "virtualbox" do |vb|
+        vb.customize ["modifyvm", :id, "--ioapic", "on"]
+        vb.memory = 4096
+        vb.cpus = 4
+        if File.exist?(".vagrant/node#{n+1}-disk1.vdi")
+            vb.customize ['storagectl', :id, '--name', 'SATAController', '--remove']
+        end
+        vb.customize ['storagectl', :id, '--name', 'SATAController', '--add', 'sata']
+
+        (1..3).each do |diskID|
+          if !File.exists?("tmp/node#{n+1}-disk#{diskID}.vdi")
+            vb.customize ['createhd', '--filename', "tmp/node#{n+1}-disk#{diskID}.vdi",  '--variant', 'Standard', '--size', 10 * 1024]
+          end
+          vb.customize ['storageattach', :id,  '--storagectl', 'SATAController', '--port', diskID-1, '--device', 0, '--type', 'hdd', '--medium', "tmp/node#{n+1}-disk#{diskID}.vdi"]
+        end
       end
-      
+
       node.vm.provision "shell" do |s|
         s.path = "provision/provision_every_node.sh"
         s.args = ["w#{n}"]
@@ -208,4 +221,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       end
     end
   end
+
+
 end
